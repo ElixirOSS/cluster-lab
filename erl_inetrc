@@ -1,0 +1,5 @@
+%% -- ERLANG INET CONFIGURATION FILE --
+%% For more info see: https://www.erlang.org/doc/apps/erts/inet_cfg.html
+{resolv_conf, ""}.
+{nameserver, {127,0,0,1}, 9053}.
+{lookup, [file, dns]}.

@@ -1,0 +1,54 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  build:
+    desc: Build the Docker using buildx
+    cmds:
+      - docker buildx build --platform linux/arm64 -t cluster-lab:latest .
+
+  builddc:
+    desc: Build the Docker image for Docker Compose
+    cmds:
+      - docker compose build
+
+  up:
+    desc: Run the Docker container
+    cmds:
+      - docker compose up -d
+
+  down:
+    desc: Stop the Docker container
+    cmds:
+      - docker compose down
+
+  shell_a:
+    desc: Open a shell in the Docker container A
+    cmds:
+      - docker compose exec node_a bash
+
+  iex_a:
+    desc: Open an iex shell in the Docker container A
+    cmds:
+      - docker compose exec node_a ./bin/cluster_lab remote
+
+  shell_b:
+    desc: Open a shell in the Docker container B
+    cmds:
+      - docker compose exec node_b bash
+
+  iex_b:
+    desc: Open an iex shell in the Docker container B
+    cmds:
+      - docker compose exec node_b ./bin/cluster_lab remote
+
+  shell_c:
+    desc: Open a shell in the Docker container C
+    cmds:
+      - docker compose exec node_c bash
+
+  iex_c:
+    desc: Open an iex shell in the Docker container C
+    cmds:
+      - docker compose exec node_c ./bin/cluster_lab remote
