@@ -1,0 +1,181 @@
+name: cluster_lab
+
+services:
+  node_a:
+    container_name: node_a
+    hostname: node_a
+    build: .
+    environment:
+      SECRET_KEY_BASE: XxCXBx3xBUuWCNIzmFMavQntSSYt1QQGyAWMpZ3hqB/Bx4YKk+gRtVqhtZWlVinX
+      ERL_DIST_PORT: 8002
+      ELIXIR_ERL_OPTIONS: "-start_epmd false -epmd_module Elixir.DynamicSrv.Epmd"
+      RELEASE_COOKIE: this-must-be-the-same-to-cluster
+      RELEASE_DISTRIBUTION: name
+      RELEASE_NODE: "node_a@cluster-lab.service.devl.consul"
+      ERL_INETRC: /data/erl_inetrc
+      SERVICE_NAME: cluster-lab
+      CONSUL_SERVICE_ADDRESS: service.devl.consul
+    labels:
+      - consul.enabled=true
+      - consul.service.cluster-lab.port=8002
+      - consul.service.cluster-lab.tags=node_a
+      - consul.service.cluster-lab.address=node_a.cluster-lab.service.devl.consul
+
+      - traefik.enable=true
+      - traefik.http.routers.cluster-lab-a.rule=Host(`myapp-a.valhalla.local`)
+      - traefik.http.services.cluster-lab-a.loadbalancer.server.port=4000
+      - traefik.docker.network=global_cluster_net
+    volumes:
+      - type: bind
+        source: ./docker/volumes/app
+        target: /data
+    networks:
+      - cluster_network
+    depends_on:
+      - consul
+      - docker-consul-agent
+
+  node_b:
+    container_name: node_b
+    hostname: node_b
+    build: .
+    environment:
+      SECRET_KEY_BASE: XxCXBx3xBUuWCNIzmFMavQntSSYt1QQGyAWMpZ3hqB/Bx4YKk+gRtVqhtZWlVinX
+      ERL_DIST_PORT: 8003
+      ELIXIR_ERL_OPTIONS: "-start_epmd false -epmd_module Elixir.DynamicSrv.Epmd"
+      RELEASE_COOKIE: this-must-be-the-same-to-cluster
+      RELEASE_DISTRIBUTION: name
+      RELEASE_NODE: "node_b@cluster-lab.service.devl.consul"
+      ERL_INETRC: /data/erl_inetrc
+      SERVICE_NAME: cluster-lab
+      CONSUL_SERVICE_ADDRESS: service.devl.consul
+    labels:
+      - consul.enabled=true
+      - consul.service.cluster-lab.port=8003
+      - consul.service.cluster-lab.tags=node_b
+      - consul.service.cluster-lab.address=node_b.cluster-lab.service.devl.consul
+
+      - traefik.enable=true
+      - traefik.http.routers.cluster-lab-b.rule=Host(`myapp-b.valhalla.local`)
+      - traefik.http.services.cluster-lab-b.loadbalancer.server.port=4000
+      - traefik.docker.network=global_cluster_net
+    volumes:
+      - type: bind
+        source: ./docker/volumes/app
+        target: /data
+    networks:
+      - cluster_network
+    depends_on:
+      - consul
+      - docker-consul-agent
+
+  node_c:
+    container_name: node_c
+    hostname: node_c
+    build: .
+    environment:
+      SECRET_KEY_BASE: XxCXBx3xBUuWCNIzmFMavQntSSYt1QQGyAWMpZ3hqB/Bx4YKk+gRtVqhtZWlVinX
+      ERL_DIST_PORT: 8004
+      ELIXIR_ERL_OPTIONS: "-start_epmd false -epmd_module Elixir.DynamicSrv.Epmd"
+      RELEASE_COOKIE: this-must-be-the-same-to-cluster
+      RELEASE_DISTRIBUTION: name
+      RELEASE_NODE: "node_c@cluster-lab.service.devl.consul"
+      ERL_INETRC: /data/erl_inetrc
+      SERVICE_NAME: cluster-lab
+      CONSUL_SERVICE_ADDRESS: service.devl.consul
+    labels:
+      - consul.enabled=true
+      - consul.service.cluster-lab.port=8004
+      - consul.service.cluster-lab.tags=node_c
+      - consul.service.cluster-lab.address=node_c.cluster-lab.service.devl.consul
+
+      - traefik.enable=true
+      - traefik.http.routers.cluster-lab-c.rule=Host(`myapp-c.valhalla.local`)
+      - traefik.http.services.cluster-lab-c.loadbalancer.server.port=4000
+      - traefik.docker.network=global_cluster_net
+    volumes:
+      - type: bind
+        source: ./docker/volumes/app
+        target: /data
+    networks:
+      - cluster_network
+    depends_on:
+      - consul
+      - docker-consul-agent
+
+  consul:
+    image: hashicorp/consul:1.20
+    container_name: cluster_consul
+    hostname: consul
+    environment:
+      CONSUL_SERVER_NUMBER: 1
+      CONSUL_DATACENTER: local
+      CONSUL_DOMAIN: devl.consul
+    command:
+      - agent
+      - -dev
+      - -client=0.0.0.0
+      - -domain=devl.consul
+    networks:
+      cluster_network:
+        ipv4_address: 172.200.0.53
+    ports:
+      - "127.0.0.1:8500:8500"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8500"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
+
+  docker-consul-agent:
+    image: ghcr.io/zenchild/docker-consul-agent:latest
+    container_name: cluster_docker-consul-agent
+    hostname: docker-consul-agent
+    labels:
+      - application=docker-consul-agent
+    environment:
+      CONSUL_HTTP_ADDR: cluster_consul:8500
+      CONSUL_HTTP_TOKEN: does-not-matter-but-required-by-docker-consul-agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cluster_network
+    depends_on:
+      consul:
+        condition: service_healthy
+
+  proxy:
+    image: traefik:v3.5
+    container_name: cluster_proxy
+    hostname: proxy
+    ports:
+      - "4080:80"
+      - "8080:8080"
+    environment:
+      # This is the Traefik Static Config. It is mutually exclusive with the CLI
+      # or config file. For dynamic configuration, use the dynamic configuration
+      # files in /traefik/dynamic.
+      TRAEFIK_API: "true"
+      TRAEFIK_API_INSECURE: "true"
+      TRAEFIK_API_DASHBOARD: "true"
+      TRAEFIK_ENTRYPOINTS_WEB: "true"
+      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
+      TRAEFIK_LOG: "true"
+      TRAEFIK_PROVIDERS_DOCKER: "true"
+      TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cluster_network
+
+networks:
+  cluster_network:
+    name: global_cluster_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.200.0.0/16
+          gateway: 172.200.0.1

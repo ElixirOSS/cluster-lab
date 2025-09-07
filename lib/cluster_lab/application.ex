@@ -7,12 +7,15 @@ defmodule ClusterLab.Application do
 
   @impl true
   def start(_type, _args) do
+    topologies = Application.get_env(:libcluster, :topologies)
+
     children = [
       ClusterLabWeb.Telemetry,
-      {DNSCluster, query: Application.get_env(:cluster_lab, :dns_cluster_query) || :ignore},
+      {Cluster.Supervisor, [topologies, [name: Cluster.ClusterSupervisor]]},
       {Phoenix.PubSub, name: ClusterLab.PubSub},
-      # Start a worker by calling: ClusterLab.Worker.start_link(arg)
-      # {ClusterLab.Worker, arg},
+      # Mnesia event monitor (logs Mnesia system/activity events)
+      ClusterLab.Memento.Monitor,
+      ClusterLab.Topology,
       # Start to serve requests, typically the last entry
       ClusterLabWeb.Endpoint
     ]

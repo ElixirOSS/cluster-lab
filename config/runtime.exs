@@ -36,8 +36,6 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
-  config :cluster_lab, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-
   config :cluster_lab, ClusterLabWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -82,3 +80,20 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 end
+
+config :libcluster,
+  topologies: [
+    dyn_srv: [
+      strategy: Cluster.Strategy.DynamicSrv,
+      config: [
+        service:
+          "#{System.fetch_env!("SERVICE_NAME")}.#{System.fetch_env!("CONSUL_SERVICE_ADDRESS")}"
+      ]
+    ]
+  ]
+
+mnesia_basedir = System.get_env("MNESIA_BASEDIR", ".mnesia")
+mnesia_dir = System.get_env("MNESIA_DIR", "#{config_env()}/#{node()}")
+
+config :mnesia,
+  dir: String.to_charlist(Path.join(mnesia_basedir, mnesia_dir))

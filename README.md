@@ -39,6 +39,18 @@ command to verify that the cluster is working:
 
 * `Node.list()`
 
+## Playing with the Cluster
+
+There is a basic leader election example in the
+[lib/cluster_lab/topology.ex](lib/cluster_lab/topology.ex) file. It uses a
+Rendezvous Hash to choose the leader and is inspired by Bryan Hunter's talk on
+[Waterpark](https://youtu.be/hdBm4K-vvt0?si=7IU2vLBixi7WiAeu). I'm sure there
+are pleanty of things wrong with it, but it's fun to play with.
+
+There is also some rudimentary Mnesia stuff that isn't hashed out all that well
+yet, but go wild.
+
+
 ## Clean-up
 
 You can clean up the lab by running the following command:
