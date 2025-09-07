@@ -15,6 +15,7 @@ tasks:
 
   up:
     desc: Run the Docker container
+    deps: [builddc]
     cmds:
       - docker compose up -d
 
